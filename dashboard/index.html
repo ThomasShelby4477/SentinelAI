@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SentinelAI — AI Data Loss Prevention Dashboard</title>
+    <meta name="description" content="Enterprise AI-DLP administration dashboard for monitoring and preventing sensitive data leakage to LLMs.">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- Sidebar Navigation -->
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <div class="logo">
+                <div class="logo-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                    </svg>
+                </div>
+                <span class="logo-text">SentinelAI</span>
+            </div>
+        </div>
+        <nav class="sidebar-nav">
+            <a href="#" class="nav-item active" data-page="dashboard">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+                <span>Dashboard</span>
+            </a>
+            <a href="#" class="nav-item" data-page="scan">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                <span>Live Scanner</span>
+            </a>
+            <a href="#" class="nav-item" data-page="policies">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                <span>Policies</span>
+            </a>
+            <a href="#" class="nav-item" data-page="audit">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+                <span>Audit Log</span>
+            </a>
+            <a href="#" class="nav-item" data-page="analytics">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+                <span>Analytics</span>
+            </a>
+        </nav>
+        <div class="sidebar-footer">
+            <div class="user-badge">
+                <div class="avatar">SA</div>
+                <div class="user-info">
+                    <span class="user-name">Security Admin</span>
+                    <span class="user-role">Administrator</span>
+                </div>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <!-- Header Bar -->
+        <header class="topbar">
+            <div class="topbar-left">
+                <button class="menu-toggle" id="menuToggle">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+                </button>
+                <h1 class="page-title" id="pageTitle">Dashboard</h1>
+            </div>
+            <div class="topbar-right">
+                <div class="status-indicator">
+                    <span class="status-dot"></span>
+                    <span>Pipeline Active</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- Dashboard Page -->
+        <section class="page active" id="page-dashboard">
+            <!-- Stats Cards -->
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-icon blue">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                    </div>
+                    <div class="stat-content">
+                        <span class="stat-value" id="totalScans">0</span>
+                        <span class="stat-label">Total Scans</span>
+                    </div>
+                    <div class="stat-trend up">+12.5%</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon red">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+                    </div>
+                    <div class="stat-content">
+                        <span class="stat-value" id="totalBlocked">0</span>
+                        <span class="stat-label">Blocked</span>
+                    </div>
+                    <div class="stat-trend up">+8.3%</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon amber">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                    </div>
+                    <div class="stat-content">
+                        <span class="stat-value" id="totalWarned">0</span>
+                        <span class="stat-label">Warned</span>
+                    </div>
+                    <div class="stat-trend down">-3.1%</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon green">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                    </div>
+                    <div class="stat-content">
+                        <span class="stat-value" id="blockRate">0%</span>
+                        <span class="stat-label">Block Rate</span>
+                    </div>
+                    <div class="stat-trend neutral">~</div>
+                </div>
+            </div>
+
+            <!-- Charts Row -->
+            <div class="charts-grid">
+                <div class="card chart-card">
+                    <div class="card-header">
+                        <h3>Detection Types Distribution</h3>
+                        <select class="period-select" id="chartPeriod">
+                            <option value="7d">Last 7 days</option>
+                            <option value="30d">Last 30 days</option>
+                            <option value="90d">Last 90 days</option>
+                        </select>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="detectionChart"></canvas>
+                    </div>
+                </div>
+                <div class="card chart-card">
+                    <div class="card-header">
+                        <h3>Threat Severity Breakdown</h3>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="severityChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Recent Activity -->
+            <div class="card">
+                <div class="card-header">
+                    <h3>Recent Violations</h3>
+                    <a href="#" class="view-all" data-page="audit">View All →</a>
+                </div>
+                <div class="table-container">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Time</th>
+                                <th>User</th>
+                                <th>Source</th>
+                                <th>Detection</th>
+                                <th>Severity</th>
+                                <th>Action</th>
+                                <th>Score</th>
+                            </tr>
+                        </thead>
+                        <tbody id="recentViolations">
+                            <!-- Populated by JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- Live Scanner Page -->
+        <section class="page" id="page-scan">
+            <div class="scanner-container">
+                <div class="card scanner-card">
+                    <div class="card-header">
+                        <h3>Real-Time Prompt Scanner</h3>
+                        <span class="badge badge-info">Test Mode</span>
+                    </div>
+                    <div class="scanner-body">
+                        <div class="form-group">
+                            <label for="scanSource">Source</label>
+                            <select id="scanSource" class="form-control">
+                                <option value="browser_extension">Browser Extension</option>
+                                <option value="api_gateway">API Gateway</option>
+                                <option value="proxy">Reverse Proxy</option>
+                                <option value="endpoint_agent">Endpoint Agent</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="scanDestination">Destination</label>
+                            <input type="text" id="scanDestination" class="form-control" placeholder="e.g. api.openai.com" value="api.openai.com">
+                        </div>
+                        <div class="form-group">
+                            <label for="scanPrompt">Prompt to Scan</label>
+                            <textarea id="scanPrompt" class="form-control textarea" rows="8" placeholder="Paste a prompt here to test the detection pipeline..."></textarea>
+                        </div>
+                        <button class="btn btn-primary btn-scan" id="scanBtn">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                            Scan Prompt
+                        </button>
+                    </div>
+                </div>
+                <div class="card scanner-results" id="scanResults" style="display:none;">
+                    <div class="card-header">
+                        <h3>Scan Results</h3>
+                        <span class="badge" id="resultAction"></span>
+                    </div>
+                    <div class="result-body" id="resultBody">
+                        <!-- Populated by JS -->
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Policies Page -->
+        <section class="page" id="page-policies">
+            <div class="page-header-row">
+                <h2>Detection Policies</h2>
+                <button class="btn btn-primary" id="addPolicyBtn">+ New Policy</button>
+            </div>
+            <div class="policies-grid" id="policiesGrid">
+                <!-- Default policies rendered by JS -->
+            </div>
+        </section>
+
+        <!-- Audit Log Page -->
+        <section class="page" id="page-audit">
+            <div class="page-header-row">
+                <h2>Audit Event Log</h2>
+                <div class="audit-filters">
+                    <select id="auditActionFilter" class="form-control form-control-sm">
+                        <option value="">All Actions</option>
+                        <option value="BLOCK">Blocked</option>
+                        <option value="WARN">Warned</option>
+                        <option value="ALLOW">Allowed</option>
+                    </select>
+                    <select id="auditSourceFilter" class="form-control form-control-sm">
+                        <option value="">All Sources</option>
+                        <option value="browser_extension">Browser Extension</option>
+                        <option value="api_gateway">API Gateway</option>
+                        <option value="proxy">Proxy</option>
+                        <option value="endpoint_agent">Endpoint Agent</option>
+                    </select>
+                </div>
+            </div>
+            <div class="card">
+                <div class="table-container">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Timestamp</th>
+                                <th>User</th>
+                                <th>Source</th>
+                                <th>Destination</th>
+                                <th>Action</th>
+                                <th>Risk Score</th>
+                                <th>Detections</th>
+                                <th>Latency</th>
+                            </tr>
+                        </thead>
+                        <tbody id="auditTableBody">
+                            <!-- Populated by JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- Analytics Page -->
+        <section class="page" id="page-analytics">
+            <div class="charts-grid">
+                <div class="card chart-card full-width">
+                    <div class="card-header">
+                        <h3>Scans Over Time</h3>
+                    </div>
+                    <div class="chart-container large">
+                        <canvas id="timelineChart"></canvas>
+                    </div>
+                </div>
+            </div>
+            <div class="charts-grid">
+                <div class="card chart-card">
+                    <div class="card-header">
+                        <h3>Top Violating Users</h3>
+                    </div>
+                    <div class="violators-list" id="violatorsList">
+                        <!-- Populated by JS -->
+                    </div>
+                </div>
+                <div class="card chart-card">
+                    <div class="card-header">
+                        <h3>Source Distribution</h3>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="sourceChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>

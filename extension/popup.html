@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            width: 320px;
+            font-family: 'Inter', -apple-system, sans-serif;
+            background: #0a0e1a;
+            color: #f1f5f9;
+            font-size: 13px;
+        }
+
+        .header {
+            padding: 16px 20px;
+            background: linear-gradient(135deg, #1a1f35, #111827);
+            border-bottom: 1px solid #2a3151;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .logo svg {
+            color: #818cf8;
+        }
+
+        .logo-text {
+            font-weight: 700;
+            font-size: 15px;
+            background: linear-gradient(135deg, #818cf8, #c084fc);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .toggle {
+            position: relative;
+            width: 40px;
+            height: 22px;
+            background: #2a3151;
+            border-radius: 11px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .toggle.active {
+            background: #6366f1;
+        }
+
+        .toggle::after {
+            content: '';
+            position: absolute;
+            top: 3px;
+            left: 3px;
+            width: 16px;
+            height: 16px;
+            background: white;
+            border-radius: 50%;
+            transition: transform 0.2s;
+        }
+
+        .toggle.active::after {
+            transform: translateX(18px);
+        }
+
+        .stats {
+            padding: 20px;
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 12px;
+        }
+
+        .stat {
+            text-align: center;
+            padding: 12px 8px;
+            background: #1a1f35;
+            border: 1px solid #2a3151;
+            border-radius: 10px;
+        }
+
+        .stat-num {
+            display: block;
+            font-size: 22px;
+            font-weight: 800;
+            letter-spacing: -0.03em;
+        }
+
+        .stat-label {
+            display: block;
+            color: #64748b;
+            font-size: 10px;
+            margin-top: 2px;
+            text-transform: uppercase;
+        }
+
+        .stat:nth-child(1) .stat-num {
+            color: #3b82f6;
+        }
+
+        .stat:nth-child(2) .stat-num {
+            color: #ef4444;
+        }
+
+        .stat:nth-child(3) .stat-num {
+            color: #f59e0b;
+        }
+
+        .status-bar {
+            padding: 10px 20px;
+            border-top: 1px solid #2a3151;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 11px;
+            color: #64748b;
+        }
+
+        .status-dot {
+            width: 7px;
+            height: 7px;
+            background: #22c55e;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        .status-dot.off {
+            background: #ef4444;
+            animation: none;
+        }
+
+        @keyframes pulse {
+
+            0%,
+            100% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.4;
+            }
+        }
+
+        .footer {
+            padding: 12px 20px;
+            border-top: 1px solid #2a3151;
+            text-align: center;
+        }
+
+        .footer a {
+            color: #6366f1;
+            text-decoration: none;
+            font-size: 11px;
+            font-weight: 500;
+        }
+
+        .footer a:hover {
+            color: #818cf8;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="header">
+        <div class="logo">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20">
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+            </svg>
+            <span class="logo-text">SentinelAI</span>
+        </div>
+        <div class="toggle active" id="toggle"></div>
+    </div>
+    <div class="stats">
+        <div class="stat">
+            <span class="stat-num" id="scanned">0</span>
+            <span class="stat-label">Scanned</span>
+        </div>
+        <div class="stat">
+            <span class="stat-num" id="blocked">0</span>
+            <span class="stat-label">Blocked</span>
+        </div>
+        <div class="stat">
+            <span class="stat-num" id="warned">0</span>
+            <span class="stat-label">Warned</span>
+        </div>
+    </div>
+    <div class="status-bar">
+        <span class="status-dot" id="statusDot"></span>
+        <span id="statusText">Protection active</span>
+    </div>
+    <div style="padding: 10px 20px; border-top: 1px solid #2a3151;">
+        <label style="display:block; font-size:10px; color:#64748b; margin-bottom:4px;">API URL</label>
+        <input id="apiUrl" placeholder="https://your-app.vercel.app/api"
+            style="width:100%; background:#151b30; border:1px solid #2a3151; border-radius:6px; padding:5px 8px; font-size:11px; color:#f1f5f9; outline:none;" />
+        <button id="saveUrl"
+            style="width:100%; margin-top:6px; padding:5px; background:#6366f1; border:none; border-radius:6px; color:white; font-size:11px; font-weight:600; cursor:pointer;">Save</button>
+    </div>
+    <div class="footer">
+        <a href="https://your-app.vercel.app" target="_blank" id="dashLink">Open Admin Dashboard →</a>
+    </div>
+    <script>
+        const toggle = document.getElementById('toggle');
+        const statusDot = document.getElementById('statusDot');
+        const statusText = document.getElementById('statusText');
+
+        chrome.runtime.sendMessage({ type: 'GET_STATUS' }, (resp) => {
+            if (resp) {
+                toggle.classList.toggle('active', resp.isEnabled);
+                statusDot.classList.toggle('off', !resp.isEnabled);
+                statusText.textContent = resp.isEnabled ? 'Protection active' : 'Protection disabled';
+                document.getElementById('scanned').textContent = resp.stats?.scanned || 0;
+                document.getElementById('blocked').textContent = resp.stats?.blocked || 0;
+                document.getElementById('warned').textContent = resp.stats?.warned || 0;
+            }
+        });
+
+        // Load saved API URL
+        chrome.storage.local.get(['apiUrl'], (data) => {
+            if (data.apiUrl) {
+                document.getElementById('apiUrl').value = data.apiUrl;
+                document.getElementById('dashLink').href = data.apiUrl.replace('/api', '');
+            }
+        });
+
+        document.getElementById('saveUrl').addEventListener('click', () => {
+            const url = document.getElementById('apiUrl').value.trim();
+            if (url) {
+                chrome.runtime.sendMessage({ type: 'SET_API_URL', url });
+                document.getElementById('dashLink').href = url.replace('/api', '');
+                document.getElementById('saveUrl').textContent = '✓ Saved!';
+                setTimeout(() => document.getElementById('saveUrl').textContent = 'Save', 1500);
+            }
+        });
+
+        toggle.addEventListener('click', () => {
+            const newState = !toggle.classList.contains('active');
+            toggle.classList.toggle('active', newState);
+            statusDot.classList.toggle('off', !newState);
+            statusText.textContent = newState ? 'Protection active' : 'Protection disabled';
+            chrome.runtime.sendMessage({ type: 'TOGGLE_ENABLED', enabled: newState });
+        });
+    </script>
+</body>
+
+</html>

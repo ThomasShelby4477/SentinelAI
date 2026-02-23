@@ -1,0 +1,157 @@
+/* SentinelAI Content Script Styles — Notification overlays */
+
+.sentinel-notification {
+    position: fixed;
+    top: 16px;
+    right: 16px;
+    width: 420px;
+    max-width: 90vw;
+    background: #1a1f35;
+    border: 1px solid #2a3151;
+    border-radius: 14px;
+    padding: 18px 20px;
+    z-index: 2147483647;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    font-size: 13px;
+    color: #f1f5f9;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5), 0 0 40px rgba(99, 102, 241, 0.1);
+    transform: translateX(110%);
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.sentinel-notification.sentinel-visible {
+    transform: translateX(0);
+}
+
+.sentinel-block {
+    border-left: 4px solid #ef4444;
+}
+
+.sentinel-warn {
+    border-left: 4px solid #f59e0b;
+}
+
+.sentinel-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
+.sentinel-logo {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: #818cf8;
+    flex: 1;
+}
+
+.sentinel-logo strong {
+    font-size: 14px;
+}
+
+.sentinel-badge {
+    padding: 3px 8px;
+    border-radius: 5px;
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.sentinel-badge-block {
+    background: rgba(239, 68, 68, 0.15);
+    color: #ef4444;
+}
+
+.sentinel-badge-warn {
+    background: rgba(245, 158, 11, 0.15);
+    color: #f59e0b;
+}
+
+.sentinel-close {
+    background: none;
+    border: none;
+    color: #64748b;
+    font-size: 20px;
+    cursor: pointer;
+    padding: 0 4px;
+    line-height: 1;
+}
+
+.sentinel-close:hover {
+    color: #f1f5f9;
+}
+
+.sentinel-message {
+    color: #94a3b8;
+    line-height: 1.5;
+    margin-bottom: 12px;
+}
+
+.sentinel-detections {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-bottom: 12px;
+}
+
+.sentinel-detection-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 10px;
+    background: rgba(0, 0, 0, 0.3);
+    border-radius: 8px;
+}
+
+.sentinel-det-type {
+    font-weight: 600;
+    font-size: 12px;
+    color: #ef4444;
+    white-space: nowrap;
+}
+
+.sentinel-det-span {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: #f59e0b;
+    word-break: break-all;
+    flex: 1;
+}
+
+.sentinel-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-top: 8px;
+}
+
+.sentinel-btn {
+    padding: 7px 16px;
+    border: none;
+    border-radius: 8px;
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.sentinel-btn-cancel {
+    background: #2a3151;
+    color: #94a3b8;
+}
+
+.sentinel-btn-cancel:hover {
+    background: #333d5e;
+}
+
+.sentinel-btn-warn {
+    background: rgba(245, 158, 11, 0.2);
+    color: #f59e0b;
+}
+
+.sentinel-btn-warn:hover {
+    background: rgba(245, 158, 11, 0.3);
+}

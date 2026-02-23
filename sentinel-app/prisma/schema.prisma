@@ -1,0 +1,97 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model Organization {
+  id          String   @id @default(uuid())
+  name        String
+  domain      String   @unique
+  plan        String   @default("enterprise")
+  ssoProvider String?  @map("sso_provider")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  users    User[]
+  groups   Group[]
+  policies Policy[]
+
+  @@map("organizations")
+}
+
+model User {
+  id           String   @id @default(uuid())
+  orgId        String   @map("org_id")
+  externalId   String   @map("external_id")
+  email        String
+  displayName  String?  @map("display_name")
+  department   String?
+  role         String   @default("user")
+  riskLevel    String   @default("normal") @map("risk_level")
+  isActive     Boolean  @default(true) @map("is_active")
+  passwordHash String?  @map("password_hash")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  organization Organization @relation(fields: [orgId], references: [id])
+
+  @@unique([orgId, externalId])
+  @@map("users")
+}
+
+model Group {
+  id         String @id @default(uuid())
+  orgId      String @map("org_id")
+  name       String
+  externalId String? @map("external_id")
+
+  organization Organization @relation(fields: [orgId], references: [id])
+
+  @@unique([orgId, name])
+  @@map("groups")
+}
+
+model Policy {
+  id           String   @id @default(uuid())
+  orgId        String   @map("org_id")
+  name         String
+  description  String?
+  version      Int      @default(1)
+  isActive     Boolean  @default(true) @map("is_active")
+  priority     Int      @default(100)
+  conditions   Json
+  action       String
+  appliesTo    Json?    @default("{\"all\": true}") @map("applies_to")
+  destinations Json?    @default("{\"all\": true}")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  organization Organization @relation(fields: [orgId], references: [id])
+
+  @@map("policies")
+}
+
+model AuditEvent {
+  id            String   @id @default(uuid())
+  orgId         String   @map("org_id")
+  userId        String?  @map("user_id")
+  userEmail     String?  @map("user_email")
+  source        String
+  destination   String?
+  action        String
+  riskScore     Float    @default(0.0) @map("risk_score")
+  detections    Json?
+  policyId      String?  @map("policy_id")
+  promptHash    String?  @map("prompt_hash")
+  promptSnippet String?  @map("prompt_snippet")
+  sessionId     String?  @map("session_id")
+  ipAddress     String?  @map("ip_address")
+  latencyMs     Int?     @map("latency_ms")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  @@map("audit_events")
+}
