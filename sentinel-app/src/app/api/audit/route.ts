@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 
+export const dynamic = "force-dynamic";
+
 const DEFAULT_ORG_ID = "00000000-0000-0000-0000-000000000001";
 
 // GET /api/audit — list audit events
