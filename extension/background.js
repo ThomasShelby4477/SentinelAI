@@ -62,17 +62,25 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
 async function getAuthToken() {
     const apiUrl = await getApiUrl();
-    const dashboardUrl = apiUrl.replace('/api', '');
+    try {
+        const urlObj = new URL(apiUrl.replace('/api', ''));
+        const domain = urlObj.hostname;
 
-    return new Promise((resolve) => {
-        chrome.cookies.get({ url: dashboardUrl, name: 'better-auth.session_token' }, (cookie) => {
-            if (cookie) return resolve(cookie.value);
+        return new Promise((resolve) => {
+            chrome.cookies.getAll({ domain }, (cookies) => {
+                // Find either standard or secure session token
+                const tokenCookie = cookies.find(c =>
+                    c.name === 'better-auth.session_token' ||
+                    c.name === '__Secure-better-auth.session_token'
+                );
 
-            chrome.cookies.get({ url: dashboardUrl, name: '__Secure-better-auth.session_token' }, (secCookie) => {
-                resolve(secCookie ? secCookie.value : null);
+                resolve(tokenCookie ? tokenCookie.value : null);
             });
         });
-    });
+    } catch (err) {
+        console.warn('Failed to parse domain for cookies:', err);
+        return null;
+    }
 }
 
 async function getApiUrl() {
