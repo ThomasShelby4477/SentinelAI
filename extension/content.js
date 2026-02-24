@@ -49,27 +49,42 @@
         // This flag ensures our synthetic click below doesn't get re-scanned
         isBlocking = true;
 
-        chrome.runtime.sendMessage(
-            { type: 'SCAN_PROMPT', data: { prompt: promptText, app: hostname } },
-            (result) => {
-                if (!result || result.action === 'ALLOW') {
-                    // Re-submit by clicking the button, keeping isBlocking=true so it bypasses our listener,
-                    // but passes through to the site's React handler.
-                    const submitBtn = document.querySelector(siteConfig.submit);
-                    if (submitBtn) submitBtn.click();
-                    setTimeout(() => { isBlocking = false; }, 500);
-                } else if (result.action === 'WARN') {
-                    showWarning(result, () => {
+        try {
+            chrome.runtime.sendMessage(
+                { type: 'SCAN_PROMPT', data: { prompt: promptText, app: hostname } },
+                (result) => {
+                    // It's possible the background page is disconnected if we reach here and chrome.runtime.lastError is set
+                    if (chrome.runtime.lastError) {
+                        console.error('SentinelAI Extension Error:', chrome.runtime.lastError);
+                        isBlocking = false;
+                        return;
+                    }
+
+                    if (!result || result.action === 'ALLOW') {
+                        // Re-submit by clicking the button, keeping isBlocking=true so it bypasses our listener,
+                        // but passes through to the site's React handler.
                         const submitBtn = document.querySelector(siteConfig.submit);
                         if (submitBtn) submitBtn.click();
                         setTimeout(() => { isBlocking = false; }, 500);
-                    });
-                } else if (result.action === 'BLOCK') {
-                    showBlockNotification(result);
-                    isBlocking = false;
+                    } else if (result.action === 'WARN') {
+                        showWarning(result, () => {
+                            const submitBtn = document.querySelector(siteConfig.submit);
+                            if (submitBtn) submitBtn.click();
+                            setTimeout(() => { isBlocking = false; }, 500);
+                        });
+                    } else if (result.action === 'BLOCK') {
+                        showBlockNotification(result);
+                        isBlocking = false;
+                    }
                 }
+            );
+        } catch (err) {
+            console.error('SentinelAI Error:', err);
+            isBlocking = false;
+            if (err.message && err.message.includes('Extension context invalidated')) {
+                alert('SentinelAI Extension was updated. Please refresh the page to continue using the extension.');
             }
-        );
+        }
     }
 
     // ── UI Notifications ──────────────────────────────────────────
