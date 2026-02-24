@@ -1,17 +1,6 @@
-"use client";
-
-import { useState, useEffect } from "react";
-
-const DEMO_VIOLATIONS = [
-  { time: "2 min ago", user: "priya.sharma@corp.com", source: "browser_extension", detection: "Aadhaar Number", severity: "critical", action: "BLOCK", score: 0.95 },
-  { time: "8 min ago", user: "raj.patel@corp.com", source: "api_gateway", detection: "OpenAI API Key", severity: "critical", action: "BLOCK", score: 0.98 },
-  { time: "15 min ago", user: "emily.chen@corp.com", source: "proxy", detection: "PostgreSQL Connection", severity: "critical", action: "BLOCK", score: 0.92 },
-  { time: "23 min ago", user: "alex.kumar@corp.com", source: "browser_extension", detection: "Source Code (Python)", severity: "high", action: "WARN", score: 0.62 },
-  { time: "31 min ago", user: "sarah.jones@corp.com", source: "endpoint_agent", detection: "JWT Token", severity: "high", action: "BLOCK", score: 0.88 },
-  { time: "45 min ago", user: "dev.ops@corp.com", source: "api_gateway", detection: "AWS Access Key", severity: "critical", action: "BLOCK", score: 0.97 },
-  { time: "1 hr ago", user: "neha.gupta@corp.com", source: "browser_extension", detection: "Email + Phone PII", severity: "medium", action: "WARN", score: 0.45 },
-  { time: "1.5 hr ago", user: "mike.wilson@corp.com", source: "proxy", detection: "Internal URL", severity: "medium", action: "WARN", score: 0.52 },
-];
+import { prisma } from "@/lib/db";
+import { formatDistanceToNow } from "date-fns";
+import Link from "next/link";
 
 const badgeColor: Record<string, string> = {
   BLOCK: "bg-red-500/10 text-red-400",
@@ -23,7 +12,7 @@ const badgeColor: Record<string, string> = {
   low: "bg-blue-500/10 text-blue-400",
 };
 
-function StatCard({ icon, value, label, trend, color }: { icon: string; value: string; label: string; trend?: string; color: string }) {
+function StatCard({ icon, value, label, trend, color }: { icon: string; value: string | number; label: string; trend?: string; color: string }) {
   const colorMap: Record<string, string> = { blue: "bg-blue-500/10 text-blue-400", red: "bg-red-500/10 text-red-400", amber: "bg-amber-500/10 text-amber-400", green: "bg-green-500/10 text-green-400" };
   return (
     <div className="bg-[#1a1f35] border border-[#2a3151] rounded-xl p-5 flex items-center gap-4 hover:border-indigo-500/50 hover:-translate-y-0.5 transition-all group">
@@ -39,7 +28,19 @@ function StatCard({ icon, value, label, trend, color }: { icon: string; value: s
   );
 }
 
-export default function DashboardPage() {
+export default async function DashboardPage() {
+  const [totalScans, blocked, warned, recentViolations] = await Promise.all([
+    prisma.auditEvent.count(),
+    prisma.auditEvent.count({ where: { action: "BLOCK" } }),
+    prisma.auditEvent.count({ where: { action: "WARN" } }),
+    prisma.auditEvent.findMany({
+      take: 8,
+      orderBy: { createdAt: "desc" },
+    })
+  ]);
+
+  const blockRate = totalScans > 0 ? ((blocked / totalScans) * 100).toFixed(1) + "%" : "0%";
+
   return (
     <div className="p-8">
       {/* Top Bar */}
@@ -47,16 +48,16 @@ export default function DashboardPage() {
         <h1 className="text-2xl font-bold tracking-tight">Dashboard</h1>
         <div className="flex items-center gap-2 bg-green-500/10 px-3.5 py-1.5 rounded-full text-sm font-medium text-green-400">
           <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
-          Pipeline Active
+          Live Telemetry Active
         </div>
       </div>
 
       {/* Stats */}
       <div className="grid grid-cols-4 gap-5 mb-7">
-        <StatCard icon="🔍" value="24,847" label="Total Scans" trend="+12%" color="blue" />
-        <StatCard icon="🛑" value="1,293" label="Blocked" trend="+8.3%" color="red" />
-        <StatCard icon="⚠️" value="847" label="Warned" trend="-3.1%" color="amber" />
-        <StatCard icon="📊" value="5.2%" label="Block Rate" color="green" />
+        <StatCard icon="🔍" value={totalScans.toLocaleString()} label="Total Scans" color="blue" />
+        <StatCard icon="🛑" value={blocked.toLocaleString()} label="Blocked" color="red" />
+        <StatCard icon="⚠️" value={warned.toLocaleString()} label="Warned" color="amber" />
+        <StatCard icon="📊" value={blockRate} label="Block Rate" color="green" />
       </div>
 
       {/* Charts placeholder — static cards */}
@@ -125,17 +126,32 @@ export default function DashboardPage() {
               </tr>
             </thead>
             <tbody>
-              {DEMO_VIOLATIONS.map((v, i) => (
-                <tr key={i} className="hover:bg-indigo-500/[0.03] transition-colors border-b border-[#2a3151] last:border-b-0">
-                  <td className="px-5 py-3.5 text-sm text-gray-400">{v.time}</td>
-                  <td className="px-5 py-3.5 text-sm text-gray-300">{v.user}</td>
-                  <td className="px-5 py-3.5"><span className="px-2.5 py-1 rounded text-[0.65rem] font-semibold uppercase bg-blue-500/10 text-blue-400">{v.source.replace("_", " ")}</span></td>
-                  <td className="px-5 py-3.5 text-sm">{v.detection}</td>
-                  <td className="px-5 py-3.5"><span className={`px-2.5 py-1 rounded text-[0.65rem] font-semibold uppercase ${badgeColor[v.severity]}`}>{v.severity}</span></td>
-                  <td className="px-5 py-3.5"><span className={`px-2.5 py-1 rounded text-[0.65rem] font-semibold uppercase ${badgeColor[v.action]}`}>{v.action}</span></td>
-                  <td className="px-5 py-3.5 text-sm font-bold">{v.score.toFixed(2)}</td>
+              {recentViolations.map((v) => {
+                let parsedDetections = [];
+                try { parsedDetections = typeof v.detections === 'string' ? JSON.parse(v.detections) : v.detections; } catch (e) { }
+                const detectionStr = Array.isArray(parsedDetections) ? parsedDetections.map((d: any) => d.type).join(', ') : 'Unknown';
+
+                return (
+                  <tr key={v.id} className="hover:bg-indigo-500/[0.03] transition-colors border-b border-[#2a3151] last:border-b-0">
+                    <td className="px-5 py-3.5 text-sm text-gray-400">{formatDistanceToNow(new Date(v.createdAt), { addSuffix: true })}</td>
+                    <td className="px-5 py-3.5 text-sm text-gray-300">{v.userEmail || "Anonymous"}</td>
+                    <td className="px-5 py-3.5"><span className="px-2.5 py-1 rounded text-[0.65rem] font-semibold uppercase bg-blue-500/10 text-blue-400">{v.source.replace("_", " ")}</span></td>
+                    <td className="px-5 py-3.5 text-sm truncate max-w-[200px]" title={detectionStr}>{detectionStr}</td>
+                    <td className="px-5 py-3.5"><span className={`px-2.5 py-1 rounded text-[0.65rem] font-semibold uppercase ${badgeColor[v.action === 'BLOCK' ? 'critical' : 'high']}`}>
+                      {v.action === 'BLOCK' ? 'critical' : 'high'}
+                    </span></td>
+                    <td className="px-5 py-3.5"><span className={`px-2.5 py-1 rounded text-[0.65rem] font-semibold uppercase ${badgeColor[v.action]}`}>{v.action}</span></td>
+                    <td className="px-5 py-3.5 text-sm font-bold">{v.riskScore.toFixed(2)}</td>
+                  </tr>
+                )
+              })}
+              {recentViolations.length === 0 && (
+                <tr>
+                  <td colSpan={7} className="px-5 py-8 text-center text-gray-500 text-sm">
+                    No violations recorded yet.
+                  </td>
                 </tr>
-              ))}
+              )}
             </tbody>
           </table>
         </div>

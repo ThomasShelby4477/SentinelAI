@@ -1,24 +1,18 @@
-"use client";
-
-const DEMO_AUDIT = [
-    { time: "2 min ago", user: "priya.sharma@corp.com", source: "browser_extension", dest: "chatgpt.com", action: "BLOCK", score: 0.95, detection: "Aadhaar Number", latency: "7ms" },
-    { time: "8 min ago", user: "raj.patel@corp.com", source: "api_gateway", dest: "api.openai.com", action: "BLOCK", score: 0.98, detection: "OpenAI API Key", latency: "5ms" },
-    { time: "15 min ago", user: "emily.chen@corp.com", source: "proxy", dest: "claude.ai", action: "BLOCK", score: 0.92, detection: "PostgreSQL Connection", latency: "12ms" },
-    { time: "23 min ago", user: "alex.kumar@corp.com", source: "browser_extension", dest: "chatgpt.com", action: "WARN", score: 0.62, detection: "Source Code (Python)", latency: "8ms" },
-    { time: "31 min ago", user: "sarah.jones@corp.com", source: "endpoint_agent", dest: "gemini.google.com", action: "BLOCK", score: 0.88, detection: "JWT Token", latency: "6ms" },
-    { time: "45 min ago", user: "dev.ops@corp.com", source: "api_gateway", dest: "api.anthropic.com", action: "BLOCK", score: 0.97, detection: "AWS Access Key", latency: "4ms" },
-    { time: "1 hr ago", user: "neha.gupta@corp.com", source: "browser_extension", dest: "chatgpt.com", action: "WARN", score: 0.45, detection: "Email + Phone PII", latency: "9ms" },
-    { time: "1.5 hr ago", user: "mike.wilson@corp.com", source: "proxy", dest: "copilot.microsoft.com", action: "WARN", score: 0.52, detection: "Internal URL", latency: "11ms" },
-    { time: "2 hr ago", user: "alice.brown@corp.com", source: "api_gateway", dest: "api.openai.com", action: "BLOCK", score: 0.91, detection: "Private Key", latency: "3ms" },
-    { time: "2.5 hr ago", user: "bob.smith@corp.com", source: "browser_extension", dest: "claude.ai", action: "WARN", score: 0.55, detection: "Credit Card", latency: "7ms" },
-];
+import { prisma } from "@/lib/db";
+import { formatDistanceToNow } from "date-fns";
 
 const badge: Record<string, string> = {
     BLOCK: "bg-red-500/10 text-red-400",
     WARN: "bg-amber-500/10 text-amber-400",
+    ALLOW: "bg-green-500/10 text-green-400",
 };
 
-export default function AuditPage() {
+export default async function AuditPage() {
+    const auditLogs = await prisma.auditEvent.findMany({
+        orderBy: { createdAt: 'desc' },
+        take: 100
+    });
+
     return (
         <div className="p-8">
             <div className="flex items-center justify-between mb-8">
@@ -49,18 +43,31 @@ export default function AuditPage() {
                         </tr>
                     </thead>
                     <tbody>
-                        {DEMO_AUDIT.map((e, i) => (
-                            <tr key={i} className="hover:bg-indigo-500/[0.03] transition-colors border-b border-[#2a3151] last:border-b-0">
-                                <td className="px-5 py-3 text-sm text-gray-400">{e.time}</td>
-                                <td className="px-5 py-3 text-sm text-gray-300">{e.user}</td>
-                                <td className="px-5 py-3"><span className="px-2 py-0.5 rounded text-[0.6rem] font-semibold uppercase bg-blue-500/10 text-blue-400">{e.source.replace(/_/g, " ")}</span></td>
-                                <td className="px-5 py-3 text-sm text-gray-400">{e.dest}</td>
-                                <td className="px-5 py-3"><span className={`px-2 py-0.5 rounded text-[0.6rem] font-semibold uppercase ${badge[e.action]}`}>{e.action}</span></td>
-                                <td className="px-5 py-3 text-sm font-bold">{e.score.toFixed(3)}</td>
-                                <td className="px-5 py-3 text-sm">{e.detection}</td>
-                                <td className="px-5 py-3 text-sm text-gray-500">{e.latency}</td>
+                        {auditLogs.map((e) => {
+                            let parsedDetections = [];
+                            try { parsedDetections = typeof e.detections === 'string' ? JSON.parse(e.detections as string) : e.detections; } catch (err) { }
+                            const detectionStr = Array.isArray(parsedDetections) ? parsedDetections.map((d: any) => d.type).join(', ') : 'Unknown';
+
+                            return (
+                                <tr key={e.id} className="hover:bg-indigo-500/[0.03] transition-colors border-b border-[#2a3151] last:border-b-0">
+                                    <td className="px-5 py-3 text-sm text-gray-400">{formatDistanceToNow(new Date(e.createdAt), { addSuffix: true })}</td>
+                                    <td className="px-5 py-3 text-sm text-gray-300">{e.userEmail || "Anonymous"}</td>
+                                    <td className="px-5 py-3"><span className="px-2 py-0.5 rounded text-[0.6rem] font-semibold uppercase bg-blue-500/10 text-blue-400">{e.source.replace(/_/g, " ")}</span></td>
+                                    <td className="px-5 py-3 text-sm text-gray-400" title={e.destination || ""}>{e.destination || "N/A"}</td>
+                                    <td className="px-5 py-3"><span className={`px-2 py-0.5 rounded text-[0.6rem] font-semibold uppercase ${badge[e.action]}`}>{e.action}</span></td>
+                                    <td className="px-5 py-3 text-sm font-bold">{e.riskScore.toFixed(3)}</td>
+                                    <td className="px-5 py-3 text-sm truncate max-w-[200px]" title={detectionStr}>{detectionStr}</td>
+                                    <td className="px-5 py-3 text-sm text-gray-500">{e.latencyMs ? `${e.latencyMs}ms` : "-"}</td>
+                                </tr>
+                            )
+                        })}
+                        {auditLogs.length === 0 && (
+                            <tr>
+                                <td colSpan={8} className="px-5 py-8 text-center text-gray-500 text-sm">
+                                    No audit logs recorded yet.
+                                </td>
                             </tr>
-                        ))}
+                        )}
                     </tbody>
                 </table>
             </div>
