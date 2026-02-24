@@ -25,20 +25,32 @@ model Organization {
 }
 
 model User {
-  id           String   @id @default(uuid())
-  orgId        String   @map("org_id")
-  externalId   String   @map("external_id")
-  email        String
-  displayName  String?  @map("display_name")
-  department   String?
-  role         String   @default("user")
-  riskLevel    String   @default("normal") @map("risk_level")
-  isActive     Boolean  @default(true) @map("is_active")
-  passwordHash String?  @map("password_hash")
-  createdAt    DateTime @default(now()) @map("created_at")
+  id            String    @id @default(uuid())
+  name          String
+  email         String
+  emailVerified Boolean
+  image         String?
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
 
-  organization Organization @relation(fields: [orgId], references: [id])
+  sessions      Session[]
+  accounts      Account[]
 
+  orgId         String?   @map("org_id")
+  externalId    String?   @map("external_id")
+  displayName   String?   @map("display_name")
+  department    String?
+  role          String    @default("user")
+  banned        Boolean   @default(false)
+  banReason     String?
+  banExpires    DateTime?
+  riskLevel     String    @default("normal") @map("risk_level")
+  isActive      Boolean   @default(true) @map("is_active")
+  passwordHash  String?   @map("password_hash")
+
+  organization  Organization? @relation(fields: [orgId], references: [id])
+
+  @@unique([email])
   @@unique([orgId, externalId])
   @@map("users")
 }
@@ -94,4 +106,50 @@ model AuditEvent {
   createdAt     DateTime @default(now()) @map("created_at")
 
   @@map("audit_events")
+}
+
+model Session {
+  id        String   @id @default(uuid())
+  expiresAt DateTime
+  token     String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  ipAddress      String?
+  userAgent      String?
+  userId         String
+  impersonatedBy String?
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([token])
+  @@map("session")
+}
+
+model Account {
+  id                    String    @id @default(uuid())
+  accountId             String
+  providerId            String
+  userId                String
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@map("account")
+}
+
+model Verification {
+  id         String    @id @default(uuid())
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime? @default(now())
+  updatedAt  DateTime? @updatedAt
+
+  @@map("verification")
 }

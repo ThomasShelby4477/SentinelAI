@@ -172,42 +172,74 @@
 </head>
 
 <body>
-    <div class="header">
-        <div class="logo">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20">
+    <div id="authSection"
+        style="display: none; padding: 20px; text-align: center; height: 100vh; display: flex; flex-direction: column; justify-content: center;">
+        <div style="margin-bottom: 24px;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#818cf8" stroke-width="2" width="48" height="48"
+                style="margin: 0 auto;">
                 <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
             </svg>
-            <span class="logo-text">SentinelAI</span>
+            <div style="font-size: 18px; font-weight: bold; margin-top: 12px; color: white;">SentinelAI</div>
+            <div style="font-size: 12px; color: #94a3b8; margin-top: 4px;">Sign in to your organization</div>
         </div>
-        <div class="toggle active" id="toggle"></div>
+
+        <button id="loginBtn"
+            style="width: 100%; padding: 10px; background: white; color: black; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px;">
+            <svg class="w-4 h-4" viewBox="0 0 24 24" width="16" height="16">
+                <path fill="currentColor"
+                    d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
+                <path fill="#34A853"
+                    d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
+                <path fill="#FBBC05"
+                    d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
+                <path fill="#EA4335"
+                    d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
+            </svg>
+            Sign in with Google
+        </button>
     </div>
-    <div class="stats">
-        <div class="stat">
-            <span class="stat-num" id="scanned">0</span>
-            <span class="stat-label">Scanned</span>
+
+    <div id="mainSection" style="display: none;">
+        <div class="header">
+            <div class="logo">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20">
+                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                </svg>
+                <span class="logo-text">SentinelAI</span>
+            </div>
+            <div class="toggle active" id="toggle"></div>
         </div>
-        <div class="stat">
-            <span class="stat-num" id="blocked">0</span>
-            <span class="stat-label">Blocked</span>
+        <div class="stats">
+            <div class="stat">
+                <span class="stat-num" id="scanned">0</span>
+                <span class="stat-label">Scanned</span>
+            </div>
+            <div class="stat">
+                <span class="stat-num" id="blocked">0</span>
+                <span class="stat-label">Blocked</span>
+            </div>
+            <div class="stat">
+                <span class="stat-num" id="warned">0</span>
+                <span class="stat-label">Warned</span>
+            </div>
         </div>
-        <div class="stat">
-            <span class="stat-num" id="warned">0</span>
-            <span class="stat-label">Warned</span>
+        <div class="status-bar">
+            <span class="status-dot" id="statusDot"></span>
+            <span id="statusText">Protection active</span>
         </div>
-    </div>
-    <div class="status-bar">
-        <span class="status-dot" id="statusDot"></span>
-        <span id="statusText">Protection active</span>
-    </div>
-    <div style="padding: 10px 20px; border-top: 1px solid #2a3151;">
-        <label style="display:block; font-size:10px; color:#64748b; margin-bottom:4px;">API URL</label>
-        <input id="apiUrl" placeholder="https://your-app.vercel.app/api"
-            style="width:100%; background:#151b30; border:1px solid #2a3151; border-radius:6px; padding:5px 8px; font-size:11px; color:#f1f5f9; outline:none;" />
-        <button id="saveUrl"
-            style="width:100%; margin-top:6px; padding:5px; background:#6366f1; border:none; border-radius:6px; color:white; font-size:11px; font-weight:600; cursor:pointer;">Save</button>
-    </div>
-    <div class="footer">
-        <a href="https://your-app.vercel.app" target="_blank" id="dashLink">Open Admin Dashboard →</a>
+        <div style="padding: 10px 20px; border-top: 1px solid #2a3151;">
+            <label style="display:block; font-size:10px; color:#64748b; margin-bottom:4px;">API URL</label>
+            <input id="apiUrl" placeholder="https://your-app.vercel.app/api"
+                style="width:100%; background:#151b30; border:1px solid #2a3151; border-radius:6px; padding:5px 8px; font-size:11px; color:#f1f5f9; outline:none;" />
+            <button id="saveUrl"
+                style="width:100%; margin-top:6px; padding:5px; background:#6366f1; border:none; border-radius:6px; color:white; font-size:11px; font-weight:600; cursor:pointer;">Save</button>
+            <button id="logoutBtn"
+                style="width:100%; margin-top:6px; padding:5px; background:#334155; border:none; border-radius:6px; color:white; font-size:11px; font-weight:600; cursor:pointer; transition: background 0.2s;">Sign
+                Out</button>
+        </div>
+        <div class="footer">
+            <a href="https://your-app.vercel.app" target="_blank" id="dashLink">Open Admin Dashboard →</a>
+        </div>
     </div>
     <script src="popup.js"></script>
 </body>

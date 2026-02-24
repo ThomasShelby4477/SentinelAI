@@ -6,9 +6,12 @@
   "permissions": [
     "storage",
     "activeTab",
-    "declarativeNetRequest"
+    "declarativeNetRequest",
+    "cookies"
   ],
   "host_permissions": [
+    "http://localhost/*",
+    "https://*.vercel.app/*",
     "https://chat.openai.com/*",
     "https://chatgpt.com/*",
     "https://claude.ai/*",
@@ -30,8 +33,12 @@
         "https://gemini.google.com/*",
         "https://copilot.microsoft.com/*"
       ],
-      "js": ["content.js"],
-      "css": ["content.css"],
+      "js": [
+        "content.js"
+      ],
+      "css": [
+        "content.css"
+      ],
       "run_at": "document_idle"
     }
   ],

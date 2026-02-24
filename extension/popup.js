@@ -1,9 +1,22 @@
+const authSection = document.getElementById('authSection');
+const mainSection = document.getElementById('mainSection');
+const loginBtn = document.getElementById('loginBtn');
+const logoutBtn = document.getElementById('logoutBtn');
+
 const toggle = document.getElementById('toggle');
 const statusDot = document.getElementById('statusDot');
 const statusText = document.getElementById('statusText');
 
 chrome.runtime.sendMessage({ type: 'GET_STATUS' }, (resp) => {
     if (resp) {
+        if (!resp.sessionToken) {
+            authSection.style.display = 'flex';
+            mainSection.style.display = 'none';
+        } else {
+            authSection.style.display = 'none';
+            mainSection.style.display = 'block';
+        }
+
         toggle.classList.toggle('active', resp.isEnabled);
         statusDot.classList.toggle('off', !resp.isEnabled);
         statusText.textContent = resp.isEnabled ? 'Protection active' : 'Protection disabled';
@@ -11,6 +24,27 @@ chrome.runtime.sendMessage({ type: 'GET_STATUS' }, (resp) => {
         document.getElementById('blocked').textContent = resp.stats?.blocked || 0;
         document.getElementById('warned').textContent = resp.stats?.warned || 0;
     }
+});
+
+loginBtn.addEventListener('click', () => {
+    loginBtn.textContent = 'Opening Dashboard...';
+    chrome.runtime.sendMessage({ type: 'LOGIN' }, (resp) => {
+        if (resp && resp.pending) {
+            setTimeout(() => window.close(), 800);
+        } else {
+            loginBtn.textContent = 'Sign in failed. Try again.';
+            setTimeout(() => {
+                loginBtn.innerHTML = 'Sign in with Google';
+            }, 3000);
+        }
+    });
+});
+
+logoutBtn.addEventListener('click', () => {
+    logoutBtn.textContent = 'Signing out...';
+    chrome.runtime.sendMessage({ type: 'LOGOUT' }, () => {
+        window.location.reload();
+    });
 });
 
 // Load saved API URL

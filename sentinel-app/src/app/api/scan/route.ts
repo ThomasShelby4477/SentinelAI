@@ -1,13 +1,20 @@
 import { NextResponse } from "next/server";
 import { runPipeline } from "@/lib/detection/pipeline";
 import { prisma } from "@/lib/db";
+import { auth } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
 export async function POST(request: Request) {
     try {
+        // Enforce Better Auth session
+        const session = await auth.api.getSession({ headers: request.headers });
+        if (!session) {
+            return NextResponse.json({ error: "Unauthorized. Please sign in to the extension." }, { status: 401 });
+        }
+
         const body = await request.json();
-        const { source, destination, prompt, user_id, metadata } = body;
+        const { source, destination, prompt, metadata } = body;
 
         if (!prompt || typeof prompt !== "string") {
             return NextResponse.json({ error: "prompt is required" }, { status: 400 });
@@ -28,7 +35,8 @@ export async function POST(request: Request) {
         await prisma.auditEvent.create({
             data: {
                 orgId: DEFAULT_ORG_ID,
-                userId: user_id || null,
+                userId: session.user.id,
+                userEmail: session.user.email,
                 source: source || "api",
                 destination: destination || null,
                 action: result.action,

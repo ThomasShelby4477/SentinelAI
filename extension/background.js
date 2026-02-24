@@ -6,15 +6,17 @@
  */
 
 // ⚠️ CHANGE THIS to your Vercel deployment URL after deploying
-const SENTINEL_API = 'https://your-app.vercel.app/api';
+const SENTINEL_API = 'https://sentinel-ai-xi-rouge.vercel.app/api';
 
 // Extension state
 let isEnabled = true;
 let stats = { scanned: 0, blocked: 0, warned: 0 };
+let sessionToken = null;
 
-chrome.storage.local.get(['isEnabled', 'stats', 'apiUrl'], (data) => {
+chrome.storage.local.get(['isEnabled', 'stats', 'apiUrl', 'sessionToken'], (data) => {
     if (data.isEnabled !== undefined) isEnabled = data.isEnabled;
     if (data.stats) stats = data.stats;
+    if (data.sessionToken) sessionToken = data.sessionToken;
 });
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
@@ -23,8 +25,27 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         return true;
     }
     if (message.type === 'GET_STATUS') {
-        sendResponse({ isEnabled, stats });
-        return false;
+        getAuthToken().then((token) => {
+            sendResponse({ isEnabled, stats, sessionToken: token });
+        });
+        return true; // async
+    }
+    if (message.type === 'LOGIN') {
+        getApiUrl().then(apiUrl => {
+            const dashboardUrl = apiUrl.replace('/api', '');
+            chrome.tabs.create({ url: `${dashboardUrl}/login` });
+            sendResponse({ pending: true });
+        });
+        return true;
+    }
+    if (message.type === 'LOGOUT') {
+        getApiUrl().then(apiUrl => {
+            const urlObj = new URL(apiUrl);
+            chrome.cookies.remove({ url: apiUrl.replace('/api', ''), name: 'better-auth.session_token' });
+            chrome.cookies.remove({ url: apiUrl.replace('/api', ''), name: '__Secure-better-auth.session_token' });
+            sendResponse({ ok: true });
+        });
+        return true;
     }
     if (message.type === 'TOGGLE_ENABLED') {
         isEnabled = message.enabled;
@@ -39,6 +60,21 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     }
 });
 
+async function getAuthToken() {
+    const apiUrl = await getApiUrl();
+    const dashboardUrl = apiUrl.replace('/api', '');
+
+    return new Promise((resolve) => {
+        chrome.cookies.get({ url: dashboardUrl, name: 'better-auth.session_token' }, (cookie) => {
+            if (cookie) return resolve(cookie.value);
+
+            chrome.cookies.get({ url: dashboardUrl, name: '__Secure-better-auth.session_token' }, (secCookie) => {
+                resolve(secCookie ? secCookie.value : null);
+            });
+        });
+    });
+}
+
 async function getApiUrl() {
     return new Promise((resolve) => {
         chrome.storage.local.get(['apiUrl'], (data) => {
@@ -52,11 +88,18 @@ async function handleScan(data, tab) {
     stats.scanned++;
 
     const apiUrl = await getApiUrl();
+    const token = await getAuthToken();
 
     try {
+        const headers = { 'Content-Type': 'application/json' };
+        if (token) {
+            // Better Auth supports Bearer tokens directly
+            headers['Authorization'] = `Bearer ${token}`;
+        }
+
         const response = await fetch(`${apiUrl}/scan`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers,
             body: JSON.stringify({
                 source: 'browser_extension',
                 destination: new URL(tab?.url || '').hostname,
