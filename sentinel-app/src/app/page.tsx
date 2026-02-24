@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/db";
 import { formatDistanceToNow } from "date-fns";
 import Link from "next/link";
+import { AutoRefresh } from "@/components/AutoRefresh";
 
 const badgeColor: Record<string, string> = {
   BLOCK: "bg-red-500/10 text-red-400",
@@ -29,20 +30,64 @@ function StatCard({ icon, value, label, trend, color }: { icon: string; value: s
 }
 
 export default async function DashboardPage() {
-  const [totalScans, blocked, warned, recentViolations] = await Promise.all([
+  const [totalScans, blocked, warned, recentViolations, recentStats] = await Promise.all([
     prisma.auditEvent.count(),
     prisma.auditEvent.count({ where: { action: "BLOCK" } }),
     prisma.auditEvent.count({ where: { action: "WARN" } }),
     prisma.auditEvent.findMany({
       take: 8,
       orderBy: { createdAt: "desc" },
+    }),
+    prisma.auditEvent.findMany({
+      take: 1000,
+      orderBy: { createdAt: "desc" }
     })
   ]);
 
   const blockRate = totalScans > 0 ? ((blocked / totalScans) * 100).toFixed(1) + "%" : "0%";
 
+  // Calculate severity breakdown
+  let critical = 0, high = 0, medium = 0, low = 0;
+  const detectionTypes: Record<string, number> = {};
+
+  recentStats.forEach((event) => {
+    // Determine Severity
+    if (event.action === "BLOCK") critical++;
+    else if (event.riskScore >= 0.7) high++;
+    else if (event.riskScore >= 0.4) medium++;
+    else low++;
+
+    // Tally Detection Types
+    let parsed = [];
+    try { parsed = typeof event.detections === 'string' ? JSON.parse(event.detections) : event.detections; } catch (e) { }
+    if (Array.isArray(parsed)) {
+      parsed.forEach((d: any) => {
+        const type = d.type || "Unknown";
+        detectionTypes[type] = (detectionTypes[type] || 0) + 1;
+      });
+    }
+  });
+
+  const topDetections = Object.entries(detectionTypes)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 6)
+    .map(([name, count], i) => ({
+      name: name.length > 20 ? name.substring(0, 20) + "..." : name,
+      count,
+      color: ["bg-indigo-500", "bg-red-500", "bg-amber-500", "bg-cyan-500", "bg-green-500", "bg-purple-500"][i % 6]
+    }));
+
+  const totalSev = critical + high + medium + low || 1;
+  const severityData = [
+    { level: "Critical", count: critical, pct: (critical / totalSev) * 100, color: "bg-red-500" },
+    { level: "High", count: high, pct: (high / totalSev) * 100, color: "bg-orange-500" },
+    { level: "Medium", count: medium, pct: (medium / totalSev) * 100, color: "bg-amber-500" },
+    { level: "Low", count: low, pct: (low / totalSev) * 100, color: "bg-blue-500" },
+  ];
+
   return (
     <div className="p-8">
+      <AutoRefresh interval={3000} />
       {/* Top Bar */}
       <div className="flex items-center justify-between mb-8">
         <h1 className="text-2xl font-bold tracking-tight">Dashboard</h1>
@@ -67,35 +112,25 @@ export default async function DashboardPage() {
             <h3 className="font-semibold">Detection Types Distribution</h3>
           </div>
           <div className="p-6 grid grid-cols-2 gap-3">
-            {[
-              { name: "PII", count: 342, color: "bg-indigo-500" },
-              { name: "API Keys", count: 287, color: "bg-red-500" },
-              { name: "Tokens", count: 156, color: "bg-amber-500" },
-              { name: "DB Connections", count: 98, color: "bg-cyan-500" },
-              { name: "Source Code", count: 203, color: "bg-green-500" },
-              { name: "Internal URLs", count: 67, color: "bg-purple-500" },
-              { name: "Financial", count: 45, color: "bg-pink-500" },
-            ].map((item) => (
+            {topDetections.map((item) => (
               <div key={item.name} className="flex items-center gap-3">
                 <div className={`w-3 h-3 rounded-full ${item.color}`} />
-                <span className="text-sm text-gray-400 flex-1">{item.name}</span>
+                <span className="text-sm text-gray-400 flex-1 truncate" title={item.name}>{item.name}</span>
                 <span className="text-sm font-semibold">{item.count}</span>
               </div>
             ))}
+            {topDetections.length === 0 && (
+              <div className="col-span-2 text-sm text-gray-500">No detections recorded yet.</div>
+            )}
           </div>
         </div>
 
         <div className="bg-[#1a1f35] border border-[#2a3151] rounded-xl">
           <div className="px-6 py-4 border-b border-[#2a3151]">
-            <h3 className="font-semibold">Threat Severity Breakdown</h3>
+            <h3 className="font-semibold">Threat Severity Breakdown (Last 1k)</h3>
           </div>
           <div className="p-6 space-y-4">
-            {[
-              { level: "Critical", count: 487, pct: 41, color: "bg-red-500" },
-              { level: "High", count: 396, pct: 33, color: "bg-orange-500" },
-              { level: "Medium", count: 234, pct: 20, color: "bg-amber-500" },
-              { level: "Low", count: 81, pct: 7, color: "bg-blue-500" },
-            ].map((item) => (
+            {severityData.map((item) => (
               <div key={item.level}>
                 <div className="flex justify-between text-sm mb-1">
                   <span className="text-gray-400">{item.level}</span>
