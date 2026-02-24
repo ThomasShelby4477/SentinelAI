@@ -21,7 +21,13 @@ export default function UnauthorizedPage() {
                 </div>
                 <div className="flex gap-4 w-full">
                     <button
-                        onClick={() => window.close()}
+                        onClick={() => {
+                            if (window.opener || window.history.length === 1) {
+                                window.close();
+                            } else {
+                                alert("Your browser prevents scripts from closing this tab. Please close it manually by clicking the 'X' on the tab at the top of your screen.");
+                            }
+                        }}
                         className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors font-medium shadow-lg shadow-blue-500/20"
                     >
                         Close Tab

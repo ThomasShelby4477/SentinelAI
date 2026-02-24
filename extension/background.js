@@ -14,9 +14,11 @@ let stats = { scanned: 0, blocked: 0, warned: 0 };
 let sessionToken = null;
 
 chrome.storage.local.get(['isEnabled', 'stats', 'apiUrl', 'sessionToken'], (data) => {
-    if (data.isEnabled !== undefined) isEnabled = data.isEnabled;
-    if (data.stats) stats = data.stats;
-    if (data.sessionToken) sessionToken = data.sessionToken;
+    if (data) {
+        if (data.isEnabled !== undefined) isEnabled = data.isEnabled;
+        if (data.stats) stats = data.stats;
+        if (data.sessionToken) sessionToken = data.sessionToken;
+    }
 });
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
