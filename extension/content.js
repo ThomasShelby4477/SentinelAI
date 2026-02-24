@@ -33,7 +33,7 @@
     function interceptSubmit(e) {
         if (isBlocking) {
             e.preventDefault();
-            e.stopPropagation();
+            e.stopImmediatePropagation();
             return false;
         }
 
@@ -44,33 +44,29 @@
 
         // Block the submission while we scan
         e.preventDefault();
-        e.stopPropagation();
+        e.stopImmediatePropagation();
+
+        // This flag ensures our synthetic click below doesn't get re-scanned
         isBlocking = true;
 
         chrome.runtime.sendMessage(
             { type: 'SCAN_PROMPT', data: { prompt: promptText, app: hostname } },
             (result) => {
-                isBlocking = false;
-
                 if (!result || result.action === 'ALLOW') {
-                    // Re-submit by clicking the button
+                    // Re-submit by clicking the button, keeping isBlocking=true so it bypasses our listener,
+                    // but passes through to the site's React handler.
                     const submitBtn = document.querySelector(siteConfig.submit);
-                    if (submitBtn) {
-                        submitBtn.removeEventListener('click', interceptSubmit, true);
-                        submitBtn.click();
-                        setTimeout(() => submitBtn.addEventListener('click', interceptSubmit, true), 500);
-                    }
+                    if (submitBtn) submitBtn.click();
+                    setTimeout(() => { isBlocking = false; }, 500);
                 } else if (result.action === 'WARN') {
                     showWarning(result, () => {
                         const submitBtn = document.querySelector(siteConfig.submit);
-                        if (submitBtn) {
-                            submitBtn.removeEventListener('click', interceptSubmit, true);
-                            submitBtn.click();
-                            setTimeout(() => submitBtn.addEventListener('click', interceptSubmit, true), 500);
-                        }
+                        if (submitBtn) submitBtn.click();
+                        setTimeout(() => { isBlocking = false; }, 500);
                     });
                 } else if (result.action === 'BLOCK') {
                     showBlockNotification(result);
+                    isBlocking = false;
                 }
             }
         );
@@ -156,11 +152,14 @@
     // ── Setup Observer ────────────────────────────────────────────
 
     function attachListeners() {
-        // Intercept submit button clicks
-        const submitBtn = document.querySelector(siteConfig.submit);
-        if (submitBtn) {
-            submitBtn.addEventListener('click', interceptSubmit, true);
-        }
+        // Intercept submit button clicks via event delegation (handles dynamic React/Vue elements)
+        document.body.addEventListener('click', (e) => {
+            const target = e.target.closest(siteConfig.submit);
+            if (target) {
+                // If it's the submit button, run interception
+                interceptSubmit(e);
+            }
+        }, true); // Use capture phase for highest priority
 
         // Intercept Enter key on input
         const inputEl = document.querySelector(siteConfig.input);
