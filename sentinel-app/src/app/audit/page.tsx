@@ -15,6 +15,12 @@ export default async function AuditPage() {
         take: 100
     });
 
+    const activeExemptions = await prisma.exemption.findMany({
+        where: { orgId: "00000000-0000-0000-0000-000000000001" },
+        select: { allowedText: true }
+    });
+    const exemptedTexts = new Set(activeExemptions.map((e: any) => e.allowedText));
+
     async function exemptAction(formData: FormData) {
         "use server";
         const allowedText = formData.get("allowedText") as string;
@@ -76,7 +82,7 @@ export default async function AuditPage() {
                                     <td className="px-5 py-3 text-sm truncate max-w-[200px]" title={detectionStr}>{detectionStr}</td>
                                     <td className="px-5 py-3 text-sm text-gray-500">{e.latencyMs ? `${e.latencyMs}ms` : "-"}</td>
                                     <td className="px-5 py-3 text-right">
-                                        {e.action === "BLOCK" && firstSpan && (
+                                        {e.action === "BLOCK" && firstSpan && !exemptedTexts.has(firstSpan) && (
                                             <form action={exemptAction}>
                                                 <input type="hidden" name="allowedText" value={firstSpan} />
                                                 <SubmitButton 
@@ -86,6 +92,11 @@ export default async function AuditPage() {
                                                     Exempt
                                                 </SubmitButton>
                                             </form>
+                                        )}
+                                        {e.action === "BLOCK" && firstSpan && exemptedTexts.has(firstSpan) && (
+                                            <span className="inline-block text-[0.65rem] bg-amber-500/10 text-amber-400 px-2.5 py-1.5 rounded-md font-medium border border-amber-500/20">
+                                                Exempted
+                                            </span>
                                         )}
                                     </td>
                                 </tr>
