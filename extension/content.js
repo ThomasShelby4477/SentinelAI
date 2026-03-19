@@ -32,9 +32,8 @@
 
     function interceptSubmit(e) {
         if (isBlocking) {
-            e.preventDefault();
-            e.stopImmediatePropagation();
-            return false;
+            // Let the synthetic event pass through to the site's React/Vue handlers
+            return;
         }
 
         const inputEl = document.querySelector(siteConfig.input);
@@ -44,6 +43,7 @@
 
         // Block the submission while we scan
         e.preventDefault();
+        e.stopPropagation();
         e.stopImmediatePropagation();
 
         // This flag ensures our synthetic click below doesn't get re-scanned
@@ -81,8 +81,8 @@
         } catch (err) {
             console.error('SentinelAI Error:', err);
             isBlocking = false;
-            if (err.message && err.message.includes('Extension context invalidated')) {
-                alert('SentinelAI Extension was updated. Please refresh the page to continue using the extension.');
+            if (err.message && (err.message.includes('Extension context invalidated') || err.message.includes('sendMessage') || err.message.includes('chrome.runtime'))) {
+                alert('SentinelAI Extension was updated or disconnected. Please refresh the page to continue using the extension.');
             }
         }
     }
@@ -167,8 +167,8 @@
     // ── Setup Observer ────────────────────────────────────────────
 
     function attachListeners() {
-        // Intercept submit button clicks via event delegation (handles dynamic React/Vue elements)
-        document.body.addEventListener('click', (e) => {
+        // Intercept submit button clicks at the very top of the DOM
+        window.addEventListener('click', (e) => {
             const target = e.target.closest(siteConfig.submit);
             if (target) {
                 // If it's the submit button, run interception
@@ -176,15 +176,16 @@
             }
         }, true); // Use capture phase for highest priority
 
-        // Intercept Enter key on input
-        const inputEl = document.querySelector(siteConfig.input);
-        if (inputEl) {
-            inputEl.addEventListener('keydown', (e) => {
-                if (e.key === 'Enter' && !e.shiftKey) {
+        // Intercept Enter key at the very top of the DOM
+        window.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                // Check if the typed event started from within the main text input area
+                const target = e.target.closest(siteConfig.input);
+                if (target) {
                     interceptSubmit(e);
                 }
-            }, true);
-        }
+            }
+        }, true);
     }
 
     // Wait for elements to appear (SPAs load dynamically)

@@ -41,7 +41,7 @@ export default function AnalyticsPage() {
                 <div className="p-6">
                     <div className="flex items-end gap-[3px] h-40">
                         {days.map((d, i) => (
-                            <div key={i} className="flex-1 flex flex-col items-center gap-0.5 group relative">
+                            <div key={i} className="flex-1 flex flex-col justify-end items-center gap-0.5 group relative h-full">
                                 <div className="w-full bg-indigo-500/30 rounded-t relative" style={{ height: `${(d.scans / 1000) * 100}%` }}>
                                     <div className="absolute bottom-0 w-full bg-red-500/50 rounded-t" style={{ height: `${(d.blocked / d.scans) * 100}%` }} />
                                 </div>

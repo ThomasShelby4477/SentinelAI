@@ -1,0 +1,17 @@
+Here is my PAN details: ABCPA1234F. What category of taxpayer am I?
+
+Can you check my Aadhaar number: 8345 6789 1234 to see if it's correct?
+
+Help me debug this python script. Here is my secret key: sk-a1B2c3D4e5F6g7H8
+
+Why is my database not connecting? My URI is: postgresql://admin:superSecretPWD123@database-1.cluster.us-east-1.rds.amazonaws.com:5432/production_dbi9J0k123abc
+
+Does my credit card 4111 1111 1111 1111 look like a valid visa card?
+
+I have my access key here AKIAIOSFODNN7EXAMPLE, how do I use it with boto3?
+
+How do I configure nginx to port forward to 192.168.1.45?
+
+Please draft a cold email for me to send to rockvaibhav678@gmail.com.
+
+Here is my PAN details: ABCPA1234F. What category of taxpayer am I?
