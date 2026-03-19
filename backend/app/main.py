@@ -67,10 +67,13 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+from app.routes import scan, policies, audit, exemptions
+
 # Routes
 app.include_router(scan.router)
 app.include_router(policies.router)
 app.include_router(audit.router)
+app.include_router(exemptions.router)
 
 
 @app.get("/api/v1/health")

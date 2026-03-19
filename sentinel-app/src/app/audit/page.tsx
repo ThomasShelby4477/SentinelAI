@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/db";
 import { formatDistanceToNow } from "date-fns";
+import { revalidatePath } from "next/cache";
 
 const badge: Record<string, string> = {
     BLOCK: "bg-red-500/10 text-red-400",
@@ -12,6 +13,20 @@ export default async function AuditPage() {
         orderBy: { createdAt: 'desc' },
         take: 100
     });
+
+    async function exemptAction(formData: FormData) {
+        "use server";
+        const allowedText = formData.get("allowedText") as string;
+        if (!allowedText) return;
+        
+        await prisma.exemption.create({
+            data: {
+                orgId: "00000000-0000-0000-0000-000000000001",
+                allowedText: allowedText
+            }
+        });
+        revalidatePath("/audit");
+    }
 
     return (
         <div className="p-8">
@@ -37,7 +52,7 @@ export default async function AuditPage() {
                 <table className="w-full">
                     <thead>
                         <tr>
-                            {["Time", "User", "Source", "Destination", "Action", "Score", "Detection", "Latency"].map((h) => (
+                            {["Time", "User", "Source", "Destination", "Action", "Score", "Detection", "Latency", ""].map((h) => (
                                 <th key={h} className="px-5 py-3 text-left text-[0.65rem] uppercase tracking-wider text-gray-500 bg-black/20 font-semibold border-b border-[#2a3151]">{h}</th>
                             ))}
                         </tr>
@@ -47,6 +62,7 @@ export default async function AuditPage() {
                             let parsedDetections = [];
                             try { parsedDetections = typeof e.detections === 'string' ? JSON.parse(e.detections as string) : e.detections; } catch (err) { }
                             const detectionStr = Array.isArray(parsedDetections) ? parsedDetections.map((d: any) => d.type).join(', ') : 'Unknown';
+                            const firstSpan = Array.isArray(parsedDetections) && parsedDetections.length > 0 ? parsedDetections[0].span : '';
 
                             return (
                                 <tr key={e.id} className="hover:bg-indigo-500/[0.03] transition-colors border-b border-[#2a3151] last:border-b-0">
@@ -58,12 +74,22 @@ export default async function AuditPage() {
                                     <td className="px-5 py-3 text-sm font-bold">{e.riskScore.toFixed(3)}</td>
                                     <td className="px-5 py-3 text-sm truncate max-w-[200px]" title={detectionStr}>{detectionStr}</td>
                                     <td className="px-5 py-3 text-sm text-gray-500">{e.latencyMs ? `${e.latencyMs}ms` : "-"}</td>
+                                    <td className="px-5 py-3 text-right">
+                                        {e.action === "BLOCK" && firstSpan && (
+                                            <form action={exemptAction}>
+                                                <input type="hidden" name="allowedText" value={firstSpan} />
+                                                <button type="submit" className="text-[0.65rem] bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 px-2.5 py-1.5 rounded-md font-medium transition-colors border border-emerald-500/20">
+                                                    Exempt
+                                                </button>
+                                            </form>
+                                        )}
+                                    </td>
                                 </tr>
                             )
                         })}
                         {auditLogs.length === 0 && (
                             <tr>
-                                <td colSpan={8} className="px-5 py-8 text-center text-gray-500 text-sm">
+                                <td colSpan={9} className="px-5 py-8 text-center text-gray-500 text-sm">
                                     No audit logs recorded yet.
                                 </td>
                             </tr>

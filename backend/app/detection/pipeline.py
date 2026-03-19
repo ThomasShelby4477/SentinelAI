@@ -42,18 +42,21 @@ class DetectionPipeline:
         self.regex_engine = RegexEngine()
         self.code_classifier = CodeClassifier()
 
-    def scan(self, prompt: str, user_id: str | None = None) -> ScanResult:
+    def scan(self, prompt: str, user_id: str | None = None, exempted_texts: list[str] | None = None) -> ScanResult:
         """
         Run the full detection pipeline on a prompt.
         
         Args:
             prompt: The text to scan.
             user_id: Optional user identifier for policy targeting.
+            exempted_texts: List of exact string matches to ignore.
             
         Returns:
             ScanResult with risk score, action, and detections.
         """
         start_time = time.perf_counter()
+        if exempted_texts is None:
+            exempted_texts = []
 
         # Compute prompt hash for deduplication / audit
         prompt_hash = hashlib.sha256(prompt.encode("utf-8")).hexdigest()
@@ -80,6 +83,14 @@ class DetectionPipeline:
         # ── Stage 3: Code Classifier ──────────────────────────────
         code_detections = self.code_classifier.scan(text_to_scan)
         all_detections.extend(code_detections)
+
+        # ── Filter Exempted Detections ────────────────────────────
+        filtered_detections = []
+        for det in all_detections:
+            if det.span not in exempted_texts:
+                filtered_detections.append(det)
+        
+        all_detections = filtered_detections
 
         # ── Stage 4: Score Aggregation ────────────────────────────
         risk_score = self._aggregate_scores(all_detections)

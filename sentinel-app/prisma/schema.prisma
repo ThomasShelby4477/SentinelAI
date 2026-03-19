@@ -108,6 +108,15 @@ model AuditEvent {
   @@map("audit_events")
 }
 
+model Exemption {
+  id          String   @id @default(uuid())
+  orgId       String   @map("org_id")
+  allowedText String   @map("allowed_text")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@map("exemptions")
+}
+
 model Session {
   id        String   @id @default(uuid())
   expiresAt DateTime

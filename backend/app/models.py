@@ -109,6 +109,17 @@ class Policy(Base):
     organization = relationship("Organization", back_populates="policies")
 
 
+# ── Exemptions ──────────────────────────────────────────────────────
+
+class Exemption(Base):
+    __tablename__ = "exemptions"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_uuid)
+    org_id: Mapped[str] = mapped_column(String(36), ForeignKey("organizations.id"), nullable=False)
+    allowed_text: Mapped[str] = mapped_column(Text, nullable=False)
+    created_at: Mapped[str] = mapped_column(String(50), default=lambda: datetime.now(timezone.utc).isoformat())
+
+
 # ── Custom Patterns ─────────────────────────────────────────────────
 
 class CustomPattern(Base):

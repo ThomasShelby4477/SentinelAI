@@ -10,13 +10,13 @@ from app.config import get_settings
 from app.database import get_db
 from app.schemas import ScanRequest, ScanResponse, DetectionItem
 from app.detection.pipeline import DetectionPipeline
-from app.models import AuditEvent
+from app.models import AuditEvent, Exemption
+from sqlalchemy import select
 
 router = APIRouter(prefix="/api/v1", tags=["scan"])
 
 # Singleton pipeline instance
 _pipeline = DetectionPipeline()
-
 
 @router.post("/scan", response_model=ScanResponse)
 async def scan_prompt(request: ScanRequest, db: AsyncSession = Depends(get_db)):
@@ -35,8 +35,12 @@ async def scan_prompt(request: ScanRequest, db: AsyncSession = Depends(get_db)):
             detail=f"Prompt exceeds maximum size of {settings.max_prompt_size_bytes} bytes",
         )
 
+    # Fetch active exemptions
+    exemptions_result = await db.execute(select(Exemption.allowed_text).where(Exemption.org_id == "00000000-0000-0000-0000-000000000001"))
+    exempted_texts = list(exemptions_result.scalars().all())
+
     # Run detection pipeline
-    result = _pipeline.scan(prompt=request.prompt, user_id=request.user_id)
+    result = _pipeline.scan(prompt=request.prompt, user_id=request.user_id, exempted_texts=exempted_texts)
 
     # Build response detections
     detections = [
