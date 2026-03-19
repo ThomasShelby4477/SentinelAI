@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/db";
 import { formatDistanceToNow } from "date-fns";
 import { revalidatePath } from "next/cache";
+import { SubmitButton } from "@/components/SubmitButton";
 
 const badge: Record<string, string> = {
     BLOCK: "bg-red-500/10 text-red-400",
@@ -78,9 +79,12 @@ export default async function AuditPage() {
                                         {e.action === "BLOCK" && firstSpan && (
                                             <form action={exemptAction}>
                                                 <input type="hidden" name="allowedText" value={firstSpan} />
-                                                <button type="submit" className="text-[0.65rem] bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 px-2.5 py-1.5 rounded-md font-medium transition-colors border border-emerald-500/20">
+                                                <SubmitButton 
+                                                    pendingText="Exempting..."
+                                                    className="text-[0.65rem] bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 px-2.5 py-1.5 rounded-md font-medium border border-emerald-500/20"
+                                                >
                                                     Exempt
-                                                </button>
+                                                </SubmitButton>
                                             </form>
                                         )}
                                     </td>

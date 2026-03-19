@@ -173,6 +173,8 @@ export function decodeText(text: string): string {
     return decoded;
 }
 
+import { prisma } from "@/lib/db";
+
 // Full pipeline
 export interface ScanResult {
     action: "BLOCK" | "WARN" | "ALLOW";
@@ -186,6 +188,14 @@ export interface ScanResult {
 export async function runPipeline(prompt: string): Promise<ScanResult> {
     const start = performance.now();
 
+    // Fetch active exemptions
+    const DEFAULT_ORG_ID = "00000000-0000-0000-0000-000000000001";
+    const exemptionRecords = await prisma.exemption.findMany({
+        where: { orgId: DEFAULT_ORG_ID },
+        select: { allowedText: true }
+    });
+    const exemptedTexts = new Set(exemptionRecords.map((e: any) => e.allowedText));
+
     // Stage 1: Decode
     const decoded = decodeText(prompt);
 
@@ -194,15 +204,24 @@ export async function runPipeline(prompt: string): Promise<ScanResult> {
 
     // Stage 3: Code classifier
     const codeDetection = detectCode(decoded);
-    const detections = codeDetection ? [...regexDetections, codeDetection] : regexDetections;
+    let detections = codeDetection ? [...regexDetections, codeDetection] : regexDetections;
+
+    // Filter exemptions
+    if (exemptedTexts.size > 0) {
+        detections = detections.filter(d => !exemptedTexts.has(d.span));
+    }
 
     // Stage 4: Score aggregation
-    const maxConf = detections.length ? Math.max(...detections.map((d) => d.confidence)) : 0;
-    const severityBoost = detections.some((d) => d.severity === "critical") ? 0.1 : 0;
-    const diversityBoost = new Set(detections.map((d) => d.category)).size * 0.02;
-    const riskScore = Math.min(maxConf + severityBoost + diversityBoost + detections.length * 0.02, 1.0);
-
-    const action = riskScore >= 0.7 ? "BLOCK" : riskScore >= 0.3 ? "WARN" : "ALLOW";
+    let riskScore = 0;
+    let action: "BLOCK" | "WARN" | "ALLOW" = "ALLOW";
+    
+    if (detections.length > 0) {
+        const maxConf = Math.max(...detections.map((d) => d.confidence));
+        const severityBoost = detections.some((d) => d.severity === "critical") ? 0.1 : 0;
+        const diversityBoost = new Set(detections.map((d) => d.category)).size * 0.02;
+        riskScore = Math.min(maxConf + severityBoost + diversityBoost + detections.length * 0.02, 1.0);
+        action = riskScore >= 0.7 ? "BLOCK" : riskScore >= 0.3 ? "WARN" : "ALLOW";
+    }
 
     const latencyMs = Math.round(performance.now() - start);
 

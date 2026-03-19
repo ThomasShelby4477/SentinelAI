@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/db";
 import { formatDistanceToNow } from "date-fns";
 import { revalidatePath } from "next/cache";
+import { SubmitButton } from "@/components/SubmitButton";
 
 export default async function ExemptionsPage() {
     const exemptions = await prisma.exemption.findMany({
@@ -44,9 +45,12 @@ export default async function ExemptionsPage() {
                                 <td className="px-6 py-4 text-sm w-32">
                                     <form action={revokeAction}>
                                         <input type="hidden" name="id" value={ex.id} />
-                                        <button type="submit" className="text-xs bg-red-500/10 hover:bg-red-500/20 text-red-400 px-3 py-1.5 rounded-md font-medium transition-colors border border-red-500/20">
+                                        <SubmitButton 
+                                            pendingText="Revoking..."
+                                            className="text-xs bg-red-500/10 hover:bg-red-500/20 text-red-400 px-3 py-1.5 rounded-md font-medium border border-red-500/20"
+                                        >
                                             Revoke
-                                        </button>
+                                        </SubmitButton>
                                     </form>
                                 </td>
                             </tr>
