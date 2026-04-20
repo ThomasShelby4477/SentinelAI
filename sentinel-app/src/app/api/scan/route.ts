@@ -7,10 +7,12 @@ export const dynamic = "force-dynamic";
 
 export async function POST(request: Request) {
     try {
-        // Enforce Better Auth session
-        const session = await auth.api.getSession({ headers: request.headers });
-        if (!session) {
-            return NextResponse.json({ error: "Unauthorized. Please sign in to the extension." }, { status: 401 });
+        // Try to get session (optional — extension can work without auth)
+        let session: { user: { id: string; email: string } } | null = null;
+        try {
+            session = await auth.api.getSession({ headers: request.headers });
+        } catch {
+            // Session lookup failed — continue without auth
         }
 
         const body = await request.json();
@@ -31,12 +33,12 @@ export async function POST(request: Request) {
             create: { id: DEFAULT_ORG_ID, name: "Default Organization", domain: "localhost" },
         });
 
-        // Log audit event
+        // Log audit event (works with or without auth)
         await prisma.auditEvent.create({
             data: {
                 orgId: DEFAULT_ORG_ID,
-                userId: session.user.id,
-                userEmail: session.user.email,
+                userId: session?.user?.id || null,
+                userEmail: session?.user?.email || null,
                 source: source || "api",
                 destination: destination || null,
                 action: result.action,
