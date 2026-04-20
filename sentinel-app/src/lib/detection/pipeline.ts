@@ -38,12 +38,20 @@ function luhnCheck(num: string): boolean {
 // Aadhaar Verhoeff validator (simplified check)
 function aadhaarCheck(num: string): boolean {
     const digits = num.replace(/\D/g, "");
-    return digits.length === 12 && digits[0] >= "2";
+    // Must be exactly 12 digits, first digit >= 2, and not all same digits
+    if (digits.length !== 12 || digits[0] < "2") return false;
+    // Reject strings where all digits are the same (e.g., 222222222222)
+    if (/^(\d)\1+$/.test(digits)) return false;
+    return true;
 }
 
 const PATTERNS: Pattern[] = [
-    // PII
-    { name: "aadhaar_number", regex: /\b[2-9]\d{3}[\s-]?\d{4}[\s-]?\d{4}\b/g, category: "PII", severity: "critical", confidence: 0.95, validator: (m) => aadhaarCheck(m) },
+    // Financial (must come before Aadhaar to allow overlap dedup)
+    { name: "credit_card", regex: /\b(?:4\d{3}|5[1-5]\d{2}|3[47]\d{2}|6011)[-\s]?\d{4}[-\s]?\d{4}[-\s]?\d{3,4}\b/g, category: "FINANCIAL", severity: "critical", confidence: 0.90, validator: (m) => luhnCheck(m) },
+    { name: "iban", regex: /\b[A-Z]{2}\d{2}[A-Z0-9]{4}\d{7}([A-Z0-9]?){0,16}\b/g, category: "FINANCIAL", severity: "high", confidence: 0.85 },
+
+    // PII — Aadhaar uses negative lookahead to avoid matching credit card substrings
+    { name: "aadhaar_number", regex: /\b[2-9]\d{3}[\s-]?\d{4}[\s-]?\d{4}\b(?![\s-]?\d)/g, category: "PII", severity: "critical", confidence: 0.95, validator: (m) => aadhaarCheck(m) },
     { name: "pan_number", regex: /\b[A-Z]{5}\d{4}[A-Z]\b/g, category: "PII", severity: "high", confidence: 0.90 },
     { name: "ssn", regex: /\b(?!000|666|9\d{2})\d{3}-(?!00)\d{2}-(?!0000)\d{4}\b/g, category: "PII", severity: "critical", confidence: 0.95 },
     { name: "email_address", regex: /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b/g, category: "PII", severity: "medium", confidence: 0.80 },
@@ -77,13 +85,12 @@ const PATTERNS: Pattern[] = [
     { name: "private_ipv4", regex: /\b(?:10\.\d{1,3}\.\d{1,3}\.\d{1,3}|172\.(?:1[6-9]|2\d|3[01])\.\d{1,3}\.\d{1,3}|192\.168\.\d{1,3}\.\d{1,3})\b/g, category: "INTERNAL_URL", severity: "medium", confidence: 0.80 },
     { name: "internal_url", regex: /https?:\/\/[a-z0-9.-]+\.(?:internal|corp|local|intra)\b[^\s]*/gi, category: "INTERNAL_URL", severity: "high", confidence: 0.85 },
 
-    // Financial
-    { name: "credit_card", regex: /\b(?:4\d{3}|5[1-5]\d{2}|3[47]\d{2}|6011)[-\s]?\d{4}[-\s]?\d{4}[-\s]?\d{3,4}\b/g, category: "FINANCIAL", severity: "critical", confidence: 0.90, validator: (m) => luhnCheck(m) },
-    { name: "iban", regex: /\b[A-Z]{2}\d{2}[A-Z0-9]{4}\d{7}([A-Z0-9]?){0,16}\b/g, category: "FINANCIAL", severity: "high", confidence: 0.85 },
 ];
 
 export function runRegexEngine(text: string): Detection[] {
     const detections: Detection[] = [];
+    // Track matched character ranges to prevent overlapping detections
+    const matchedRanges: Array<{ start: number; end: number; type: string }> = [];
 
     for (const pattern of PATTERNS) {
         pattern.regex.lastIndex = 0; // Reset regex state
@@ -92,6 +99,17 @@ export function runRegexEngine(text: string): Detection[] {
         for (const match of matches) {
             const span = match[0];
             if (pattern.validator && !pattern.validator(span)) continue;
+
+            const matchStart = match.index ?? 0;
+            const matchEnd = matchStart + span.length;
+
+            // Skip if this span overlaps with an already-detected higher-priority pattern
+            const overlaps = matchedRanges.some(
+                (r) => matchStart < r.end && matchEnd > r.start
+            );
+            if (overlaps) continue;
+
+            matchedRanges.push({ start: matchStart, end: matchEnd, type: pattern.name });
 
             detections.push({
                 type: pattern.name,

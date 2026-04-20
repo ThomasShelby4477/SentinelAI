@@ -10,8 +10,8 @@
     'use strict';
 
     const SITE_SELECTORS = {
-        'chat.openai.com': { input: '#prompt-textarea', submit: '[data-testid="send-button"]' },
-        'chatgpt.com': { input: '#prompt-textarea', submit: '[data-testid="send-button"]' },
+        'chat.openai.com': { input: '#prompt-textarea, div[contenteditable="true"], .ProseMirror', submit: '[data-testid="send-button"], button[aria-label*="Send"], button[aria-label*="Message"]' },
+        'chatgpt.com': { input: '#prompt-textarea, div[contenteditable="true"], .ProseMirror', submit: '[data-testid="send-button"], button[aria-label*="Send"], button[aria-label*="Message"]' },
         'claude.ai': { input: '[contenteditable="true"]', submit: 'button[aria-label="Send Message"]' },
         'gemini.google.com': { input: '.ql-editor', submit: 'button[aria-label="Send message"]' },
         'copilot.microsoft.com': { input: '#searchbox', submit: '#submit-button' },
@@ -21,7 +21,8 @@
     const siteConfig = SITE_SELECTORS[hostname];
     if (!siteConfig) return;
 
-    let isBlocking = false;
+    let isSyntheticSubmit = false;
+    let isScanning = false;
 
     // ── Interception ──────────────────────────────────────────────
 
@@ -30,9 +31,28 @@
         return element.innerText || element.textContent || element.value || '';
     }
 
+    function clearInputText(element) {
+        if (!element) return;
+        // Support standard DOM and inner contenteditable elements
+        element.value = '';
+        element.textContent = '';
+        element.innerText = '';
+        element.innerHTML = '';
+        // Dispatch React-friendly events so SPAs recognize the cleared input
+        element.dispatchEvent(new Event('input', { bubbles: true }));
+        element.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+
+    function setUIProcessingState(isProcessing) {
+        const submitBtn = document.querySelector(siteConfig.submit);
+        const inputEl = document.querySelector(siteConfig.input);
+        if (submitBtn) submitBtn.style.opacity = isProcessing ? '0.5' : '1';
+        if (inputEl) inputEl.style.opacity = isProcessing ? '0.5' : '1';
+    }
+
     function interceptSubmit(e) {
-        if (isBlocking) {
-            // Let the synthetic event pass through to the site's React/Vue handlers
+        // Allow programmatic submissions from our own extension's explicit bypass logic
+        if (isSyntheticSubmit || !e.isTrusted) {
             return;
         }
 
@@ -41,46 +61,55 @@
 
         if (!promptText || promptText.length < 5) return;
 
-        // Block the submission while we scan
+        // Block the submission at the DOM event level IMMEDIATELY
         e.preventDefault();
         e.stopPropagation();
         e.stopImmediatePropagation();
 
-        // This flag ensures our synthetic click below doesn't get re-scanned
-        isBlocking = true;
+        // If a scan is already in progress, drop any further impatient user interactions
+        if (isScanning) {
+            return; 
+        }
+
+        isScanning = true;
+        setUIProcessingState(true);
 
         try {
             chrome.runtime.sendMessage(
                 { type: 'SCAN_PROMPT', data: { prompt: promptText, app: hostname } },
                 (result) => {
-                    // It's possible the background page is disconnected if we reach here and chrome.runtime.lastError is set
+                    isScanning = false;
+                    setUIProcessingState(false);
+                    
                     if (chrome.runtime.lastError) {
                         console.error('SentinelAI Extension Error:', chrome.runtime.lastError);
-                        isBlocking = false;
                         return;
                     }
 
                     if (!result || result.action === 'ALLOW') {
-                        // Re-submit by clicking the button, keeping isBlocking=true so it bypasses our listener,
-                        // but passes through to the site's React handler.
+                        // Permitted prompt: trigger a synthetic click and briefly flag 'isSyntheticSubmit = true' to bypass THIS interceptor
+                        isSyntheticSubmit = true;
                         const submitBtn = document.querySelector(siteConfig.submit);
                         if (submitBtn) submitBtn.click();
-                        setTimeout(() => { isBlocking = false; }, 500);
+                        setTimeout(() => { isSyntheticSubmit = false; }, 500);
                     } else if (result.action === 'WARN') {
                         showWarning(result, () => {
+                            isSyntheticSubmit = true;
                             const submitBtn = document.querySelector(siteConfig.submit);
                             if (submitBtn) submitBtn.click();
-                            setTimeout(() => { isBlocking = false; }, 500);
+                            setTimeout(() => { isSyntheticSubmit = false; }, 500);
                         });
                     } else if (result.action === 'BLOCK') {
+                        // Highly sensitive prompt: block it entirely and clear the text so the engine CANNOT execute it
                         showBlockNotification(result);
-                        isBlocking = false;
+                        clearInputText(inputEl);
                     }
                 }
             );
         } catch (err) {
+            isScanning = false;
+            setUIProcessingState(false);
             console.error('SentinelAI Error:', err);
-            isBlocking = false;
             if (err.message && (err.message.includes('Extension context invalidated') || err.message.includes('sendMessage') || err.message.includes('chrome.runtime'))) {
                 alert('SentinelAI Extension was updated or disconnected. Please refresh the page to continue using the extension.');
             }

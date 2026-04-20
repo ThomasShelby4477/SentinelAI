@@ -135,9 +135,12 @@ async function handleScan(data, tab) {
 function runLocalDetection(text) {
     const detections = [];
     const patterns = [
-        { name: 'Aadhaar', regex: /\b[2-9]\d{3}[\s-]?\d{4}[\s-]?\d{4}\b/g, severity: 'critical' },
+        { name: 'Credit Card', regex: /\b(?:4\d{3}|5[1-5]\d{2}|3[47]\d{2}|6011)[-\s]?\d{4}[-\s]?\d{4}[-\s]?\d{3,4}\b/g, severity: 'critical' },
+        { name: 'Aadhaar', regex: /\b[2-9]\d{3}[\s-]?\d{4}[\s-]?\d{4}\b(?![\s-]?\d)/g, severity: 'critical' },
         { name: 'PAN', regex: /\b[A-Z]{5}\d{4}[A-Z]\b/g, severity: 'high' },
         { name: 'SSN', regex: /\b\d{3}-\d{2}-\d{4}\b/g, severity: 'critical' },
+        { name: 'Indian Phone', regex: /\b(?:\+91[\s-]?)?[6-9]\d{9}\b/g, severity: 'high' },
+        { name: 'Email Address', regex: /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b/g, severity: 'medium' },
         { name: 'API Key (OpenAI)', regex: /\bsk-[a-zA-Z0-9]{20,}\b/g, severity: 'critical' },
         { name: 'AWS Key', regex: /\bAKIA[0-9A-Z]{16}\b/g, severity: 'critical' },
         { name: 'JWT Token', regex: /\beyJ[a-zA-Z0-9_-]*\.eyJ[a-zA-Z0-9_-]*\.[a-zA-Z0-9_-]+\b/g, severity: 'high' },
